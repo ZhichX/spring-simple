@@ -3,6 +3,7 @@ package com.xzc.spring.framework.webmvc.servlet;
 import com.xzc.spring.framework.annotation.Controller;
 import com.xzc.spring.framework.annotation.RequestMapping;
 import com.xzc.spring.framework.annotation.RequestParam;
+import com.xzc.spring.framework.aop.AopProxyUtil;
 import com.xzc.spring.framework.context.ApplicationContext;
 import com.xzc.spring.framework.webmvc.HandlerAdapter;
 import com.xzc.spring.framework.webmvc.HandlerMapping;
@@ -181,33 +182,39 @@ public class DispatcherServlet extends HttpServlet {
      */
     private void initHandlerMappings(ApplicationContext context) {
         String[] beanNames = context.getBeanDefinitionNames();
-        for (String beanName : beanNames) {
-            Object controller = context.getBean(beanName);
-            Class<?> controllerClass = controller.getClass();
-            // FIXME 加入 AOP 后 这里得到的是代理对象, 需要得到原对象来做处理
-            if (!controllerClass.isAnnotationPresent(Controller.class)) {
-                continue;
-            }
-
-            String basePath = "";
-            if (controllerClass.isAnnotationPresent(RequestMapping.class)) {
-                RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
-                basePath = requestMapping.value();
-            }
-
-            // 扫描所有public的带RequestMapping的方法
-            Method[] methods = controllerClass.getMethods();
-            for (Method method : methods) {
-                if (!method.isAnnotationPresent(RequestMapping.class)) {
+        try {
+            for (String beanName : beanNames) {
+                Object controllerProxy = context.getBean(beanName);
+                // 加入 AOP 后 这里得到的是代理对象, 需要得到原对象来做处理
+                Object controller = AopProxyUtil.getTargetObject(controllerProxy);
+                Class<?> controllerClass = controller.getClass();
+                if (!controllerClass.isAnnotationPresent(Controller.class)) {
                     continue;
                 }
-                RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
-                String regex = "/" + basePath + "/" + requestMapping.value();
-                regex = regex.replaceAll("\\*", ".*").replaceAll("/+", "/");
-                Pattern pattern = Pattern.compile(regex);
-                this.handlerMappings.add(new HandlerMapping(pattern, controller, method));
-                System.out.println("RequestMapping: [" + regex + "] : " + method.getName());
+
+                String basePath = "";
+                if (controllerClass.isAnnotationPresent(RequestMapping.class)) {
+                    RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
+                    basePath = requestMapping.value();
+                }
+
+                // 扫描所有public的带RequestMapping的方法
+                Method[] methods = controllerClass.getMethods();
+                for (Method method : methods) {
+                    if (!method.isAnnotationPresent(RequestMapping.class)) {
+                        continue;
+                    }
+                    RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
+                    String regex = "/" + basePath + "/" + requestMapping.value();
+                    regex = regex.replaceAll("\\*", ".*").replaceAll("/+", "/");
+                    Pattern pattern = Pattern.compile(regex);
+                    // 保存原对象的Method关系，AOP调用时，也需要调用原对象的Method
+                    this.handlerMappings.add(new HandlerMapping(pattern, controller, method));
+                    System.out.println("RequestMapping: [" + regex + "] : " + method.getName());
+                }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -259,7 +266,7 @@ public class DispatcherServlet extends HttpServlet {
         /* java8+的新增函数, 使用编译器时加上-parameters参数
         // 在Spring中的实现是封装了ASM进行参数名称的获取
         // see: org.springframework.core.LocalVariableTableParameterNameDiscoverer
-        // todo 同时还需要让paramMap中相同value的key能在后续两次赋值中被覆盖
+        // XXX 同时还需要让paramMap中相同value的key能在后续两次赋值中被覆盖
         */
         /*Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {

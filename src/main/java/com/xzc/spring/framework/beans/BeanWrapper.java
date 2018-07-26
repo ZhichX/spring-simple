@@ -1,5 +1,7 @@
 package com.xzc.spring.framework.beans;
 
+import com.xzc.spring.framework.aop.AopConfig;
+import com.xzc.spring.framework.aop.AopProxy;
 import com.xzc.spring.framework.core.FactoryBean;
 
 /**
@@ -19,10 +21,11 @@ public class BeanWrapper implements FactoryBean {
      */
     private BeanPostProcessor beanPostProcessor;
 
-    public BeanWrapper(Object wrapperInstance) {
-        this.wrapperInstance = wrapperInstance;
-        // 暂时设置成一样的
-        this.originInstance = wrapperInstance;
+    private AopProxy aopProxy = new AopProxy();
+
+    public BeanWrapper(Object instance) {
+        this.wrapperInstance = aopProxy.getProxy(instance);
+        this.originInstance = instance;
     }
 
     /**
@@ -54,5 +57,9 @@ public class BeanWrapper implements FactoryBean {
 
     public void setBeanPostProcessor(BeanPostProcessor beanPostProcessor) {
         this.beanPostProcessor = beanPostProcessor;
+    }
+
+    public void setAopConfig(AopConfig config) {
+        this.aopProxy.setAopConfig(config);
     }
 }

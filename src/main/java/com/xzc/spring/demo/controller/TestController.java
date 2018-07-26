@@ -1,5 +1,7 @@
 package com.xzc.spring.demo.controller;
 
+import com.xzc.spring.demo.service.DemoService;
+import com.xzc.spring.framework.annotation.Autowired;
 import com.xzc.spring.framework.annotation.Controller;
 import com.xzc.spring.framework.annotation.RequestMapping;
 import com.xzc.spring.framework.annotation.RequestParam;
@@ -14,6 +16,9 @@ import java.util.Map;
 @RequestMapping("test")
 public class TestController {
 
+    @Autowired("demoService")
+    private DemoService demoService;
+
     @RequestMapping("getInfo")
     public ModelAndView getInfo(HttpServletRequest req, HttpServletResponse resp,
                                 @RequestParam("name") String name) {
@@ -21,5 +26,11 @@ public class TestController {
         model.put("name", name);
         model.put("data", "return by invoke the method TestController.getInfo");
         return new ModelAndView("test1.html", model);
+    }
+
+    @RequestMapping("aop")
+    public String aop(@RequestParam("name") String name) {
+        String result = demoService.getInitString();
+        return result + ", request parameter: " + name;
     }
 }

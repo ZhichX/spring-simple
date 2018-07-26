@@ -33,10 +33,11 @@ public class BeanDefinitionReader {
         return registryBeanClasses;
     }
 
-    public BeanDefinition registryBean(String className) {
+    public BeanDefinition registryBean(String alias, String className) {
         if (this.registryBeanClasses.contains(className)) {
             BeanDefinition beanDefinition = new BeanDefinition();
             beanDefinition.setBeanClassName(className);
+            beanDefinition.setAlias(alias);
             String factoryName = lowerFirstCase(className.substring(className.lastIndexOf(".") + 1));
             beanDefinition.setFactoryBeanName(factoryName);
             return beanDefinition;
@@ -70,7 +71,7 @@ public class BeanDefinitionReader {
     private void loadConfigs(String[] locations) {
         for (String location : locations) {
             location = location.replace("classpath:", "");
-            try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(location)) {
+            try (InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(location)) {
                 config.load(inputStream);
             } catch (IOException e) {
                 e.printStackTrace();
